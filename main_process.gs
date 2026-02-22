@@ -10,7 +10,7 @@ function daily_setup() {
   const dateStr = Utilities.formatDate(tomorrow, "Asia/Tokyo", "yyyy-MM-dd");
   
   const url = `https://api.sunrise-sunset.org/json?lat=${LAT}&lng=${LNG}&date=${dateStr}&formatted=0&tzid=Asia/Tokyo`;
-  const response = UrlFetchApp.fetch(url);
+  const response = fetchWithRetry(url);
   const data = JSON.parse(response.getContentText());
   
   if (data.status !== "OK") {
