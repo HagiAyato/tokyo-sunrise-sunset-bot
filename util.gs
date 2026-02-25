@@ -44,19 +44,16 @@ function fetchWithRetry(url, options = {}) {
       lastError = e;
       const msg = e.message;
       
-      // リトライすべきエラーの判定
-      const isRetryable = msg.includes("502") || msg.includes("503") || 
-                          msg.includes("504") || msg.includes("500") || 
-                          msg.includes("Timeout") || msg.includes("server error");
-
-      if (isRetryable) {
-        // 最初のリトライ間隔は短く (0.5s, 1s, 2s...) して高速化
-        const sleepTime = Math.pow(2, i) * 500; 
-        Logger.log(`${i + 1}回目リトライ (${sleepTime}ms後): ${msg}`);
-        Utilities.sleep(sleepTime);
-        continue;
+      // 4xx系（クライアントエラー）はリトライしても無駄なので、即座に例外を投げる
+      // ※ただし、呼び出し前に getResponseCode() で判定できていないネットワークエラー（Address unavailable等）はここに来る
+      if (msg.includes("HTTP 4")) {
+        throw e;
       }
-      throw e;
+
+      // それ以外（Address unavailable, DNS error, Timeout, 5xx系）はすべてリトライ対象にする
+      const sleepTime = Math.pow(2, i) * 1000; // 0.5sだと短すぎる場合があるため1s開始を推奨
+      Logger.log(`${i + 1}回目リトライ実行中 (${sleepTime}ms後): ${msg}`);
+      Utilities.sleep(sleepTime);
     }
   }
   throw new Error("最大リトライ回数を超過しました: " + lastError.message);
